@@ -2,24 +2,54 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Heart, Users, Stethoscope, Shield, Star, MessageCircle, Calendar, TrendingUp } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Heart, Users, Stethoscope, Shield, Star, MessageCircle, Calendar, TrendingUp, Settings, LogOut } from 'lucide-react';
 import { RoleSelection } from '@/components/RoleSelection';
 import { NutritionDashboard } from '@/components/NutritionDashboard';
 import { HealthProfile } from '@/components/HealthProfile';
 import { CommunicationCenter } from '@/components/CommunicationCenter';
 import { ProgressTracker } from '@/components/ProgressTracker';
+import { AuthPage } from '@/components/AuthPage';
+import { RoleManagement } from '@/components/RoleManagement';
+import { RealTimeChat } from '@/components/RealTimeChat';
+import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('landing');
   const [selectedRole, setSelectedRole] = useState('');
+  const { user, profile, userRoles, loading, signOut, hasRole } = useAuth();
 
   const handleRoleSelect = (role: string) => {
     setSelectedRole(role);
     setCurrentPage('dashboard');
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    setCurrentPage('landing');
+    setSelectedRole('');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <Heart className="h-12 w-12 text-green-600 animate-pulse mx-auto mb-4" />
+          <p className="text-gray-600">Loading Vitalink...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth page if user is not logged in
+  if (!user && currentPage !== 'landing') {
+    return <AuthPage />;
+  }
+
   const renderPage = () => {
     switch (currentPage) {
+      case 'auth':
+        return <AuthPage />;
       case 'role-selection':
         return <RoleSelection onRoleSelect={handleRoleSelect} />;
       case 'dashboard':
@@ -30,6 +60,10 @@ const Index = () => {
         return <CommunicationCenter onBack={() => setCurrentPage('dashboard')} />;
       case 'progress':
         return <ProgressTracker onBack={() => setCurrentPage('dashboard')} />;
+      case 'role-management':
+        return <RoleManagement onBack={() => setCurrentPage('dashboard')} />;
+      case 'real-time-chat':
+        return <RealTimeChat onBack={() => setCurrentPage('dashboard')} />;
       default:
         return (
           <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
@@ -41,12 +75,59 @@ const Index = () => {
                     <Heart className="h-8 w-8 text-green-600" />
                     <h1 className="text-2xl font-bold text-green-800">Vitalink</h1>
                   </div>
-                  <Button 
-                    onClick={() => setCurrentPage('role-selection')}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full"
-                  >
-                    Get Started
-                  </Button>
+                  <div className="flex items-center space-x-4">
+                    {user ? (
+                      <>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-600">Welcome, {profile?.full_name || user.email}</span>
+                          <div className="flex space-x-1">
+                            {userRoles.map((role) => (
+                              <Badge key={role.id} variant="outline" className="text-xs">
+                                {role.role}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <Button 
+                          variant="outline"
+                          onClick={() => setCurrentPage('role-management')}
+                          size="sm"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Roles
+                        </Button>
+                        <Button 
+                          onClick={() => setCurrentPage('real-time-chat')}
+                          className="bg-green-600 hover:bg-green-700"
+                          size="sm"
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Chat
+                        </Button>
+                        <Button 
+                          onClick={() => setCurrentPage('role-selection')}
+                          className="bg-green-600 hover:bg-green-700"
+                          size="sm"
+                        >
+                          Dashboard
+                        </Button>
+                        <Button 
+                          variant="ghost"
+                          onClick={handleSignOut}
+                          size="sm"
+                        >
+                          <LogOut className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        onClick={() => setCurrentPage('auth')}
+                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full"
+                      >
+                        Sign In
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </header>
@@ -63,20 +144,42 @@ const Index = () => {
                   Real-time communication, personalized nutrition plans, and accessible health tracking.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
-                    onClick={() => setCurrentPage('role-selection')}
-                    size="lg" 
-                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg rounded-full"
-                  >
-                    Start Your Journey
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-4 text-lg rounded-full"
-                  >
-                    Learn More
-                  </Button>
+                  {user ? (
+                    <>
+                      <Button 
+                        onClick={() => setCurrentPage('role-selection')}
+                        size="lg" 
+                        className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg rounded-full"
+                      >
+                        Go to Dashboard
+                      </Button>
+                      <Button 
+                        onClick={() => setCurrentPage('real-time-chat')}
+                        variant="outline" 
+                        size="lg"
+                        className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-4 text-lg rounded-full"
+                      >
+                        Start Chatting
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        onClick={() => setCurrentPage('auth')}
+                        size="lg" 
+                        className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg rounded-full"
+                      >
+                        Start Your Journey
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="lg"
+                        className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-4 text-lg rounded-full"
+                      >
+                        Learn More
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </section>
